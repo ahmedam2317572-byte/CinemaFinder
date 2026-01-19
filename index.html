@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CinemaFinder</title>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      color: white;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .card {
+      width: 300px;
+      height: 450px;
+      border-radius: 16px;
+      background: white;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      margin-bottom: 20px;
+      transition: transform 0.4s ease;
+    }
+
+    .card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      font-size: 20px;
+      padding: 12px 26px;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+    }
+
+    .nope { background: #ff4d4d; color: white; }
+    .like { background: #4caf50; color: white; }
+
+    /* Liked Movies Section */
+    .liked-section {
+      width: 100%;
+      max-width: 900px;
+      margin-top: 20px;
+    }
+
+    .liked-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .liked-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: center;
+    }
+
+    .liked-movie {
+      width: 120px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 12px;
+      text-align: center;
+      position: relative;
+    }
+
+    .liked-movie img {
+      width: 100%;
+      border-radius: 8px;
+      margin-bottom: 6px;
+    }
+
+    .remove-btn {
+      position: absolute;
+      top: 0;
+      right: 0;
+      transform: translate(20%, -20%);
+      background: #ff4d4d;
+      border: none;
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .clear-btn {
+      background-color: #ff4d4d;  /* red */
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="card" id="card">
+      <img id="poster" alt="Movie Poster">
+    </div>
+
+    <div class="buttons">
+      <button id="dislikeBtn" class="nope">👎</button>
+      <button id="likeBtn" class="like">👍</button>
+    </div>
+  </div>
+
+  <!-- Liked Movies Section -->
+  <div class="liked-section">
+    <div class="liked-header">
+      <h2>Liked Movies</h2>
+      <button id="clearAllBtn" class="clear-btn">Clear All</button>
+    </div>
+    <div class="liked-container" id="likedContainer"></div>
+  </div>
+
+  <script>
+    // ===== STATE VARIABLES =====
+    const API_KEY = "d061e0dca3899140151d7b1e45ebf6c2"; // <-- Put your TMDb API key
+    const IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
+
+    let movies = [];
+    let index = 0;
+    let page = 1;
+
+    let likedMovies = JSON.parse(localStorage.getItem("likedMovies")) || [];
+
+    const poster = document.getElementById("poster");
+    const card = document.getElementById("card");
+    const likedContainer = document.getElementById("likedContainer");
+
+    const likeBtn = document.getElementById("likeBtn");
+    const dislikeBtn = document.getElementById("dislikeBtn");
+    const clearAllBtn = document.getElementById("clearAllBtn");
+
+    // ===== LOAD MOVIES =====
+    async function loadMovies() {
+      try {
+        const res = await fetch(
+          `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}` +
+          `&primary_release_date.gte=2000-01-01` +
+          `&primary_release_date.lte=2025-12-31` +
+          `&sort_by=popularity.desc` +
+          `&vote_count.gte=50` +
+          `&page=${page}`
+        );
+        const data = await res.json();
+        const validMovies = data.results.filter(m => m.poster_path);
+        movies = movies.concat(validMovies);
+        page++;
+        showMovie();
+      } catch (err) {
+        console.error("Failed to load movies:", err);
+      }
+    }
+
+    // ===== SHOW CURRENT MOVIE =====
+    function showMovie() {
+      if (index >= movies.length - 5) loadMovies();
+      if (!movies[index]) return;
+      poster.src = IMAGE_BASE + movies[index].poster_path;
+    }
+
+    // ===== LIKE MOVIE =====
+    function like() {
+      if (!movies[index]) return;
+
+      animateCard(1);
+
+      const movie = movies[index];
+      const alreadyLiked = likedMovies.some(m => m.id === movie.id);
+
+      if (!alreadyLiked) {
+        const likedMovie = {
+          id: movie.id,
+          title: movie.title,
+          poster: movie.poster_path,
+          year: movie.release_date?.split("-")[0]
+        };
+        likedMovies.push(likedMovie);
+        localStorage.setItem("likedMovies", JSON.stringify(likedMovies));
+        renderLikedMovies();
+      }
+
+      index++;
+      nextMovie();
+    }
+
+    // ===== DISLIKE MOVIE =====
+    function dislike() {
+      if (!movies[index]) return;
+
+      animateCard(-1);
+      index++;
+      nextMovie();
+    }
+
+    // ===== NEXT MOVIE =====
+    function nextMovie() {
+      setTimeout(() => {
+        card.style.transition = "none";
+        card.style.transform = "translateX(0)";
+        void card.offsetWidth;
+        card.style.transition = "transform 0.4s";
+        showMovie();
+      }, 400);
+    }
+
+    // ===== CARD ANIMATION =====
+    function animateCard(dir) {
+      card.style.transform =
+        dir === 1
+          ? "translateX(500px) rotate(20deg)"
+          : "translateX(-500px) rotate(-20deg)";
+    }
+
+    // ===== RENDER LIKED MOVIES =====
+    function renderLikedMovies() {
+      likedContainer.innerHTML = "";
+
+      likedMovies.forEach((movie, i) => {
+        const div = document.createElement("div");
+        div.className = "liked-movie";
+
+        div.innerHTML = `
+          <img src="${IMAGE_BASE + movie.poster}" alt="${movie.title}">
+          <span>${movie.title} (${movie.year})</span>
+          <button class="remove-btn" data-index="${i}">X</button>
+        `;
+
+        likedContainer.appendChild(div);
+      });
+
+      // Attach remove event to each button
+      document.querySelectorAll(".remove-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const idx = btn.getAttribute("data-index");
+          removeMovie(idx);
+        });
+      });
+    }
+
+    // ===== REMOVE ONE MOVIE =====
+    function removeMovie(idx) {
+      likedMovies.splice(idx, 1);
+      localStorage.setItem("likedMovies", JSON.stringify(likedMovies));
+      renderLikedMovies();
+    }
+
+    // ===== CLEAR ALL =====
+    function clearAll() {
+      
+        likedMovies = [];
+        localStorage.setItem("likedMovies", JSON.stringify(likedMovies));
+        renderLikedMovies();
+      
+    }
+
+    // ===== EVENT LISTENERS =====
+    likeBtn.addEventListener("click", like);
+    dislikeBtn.addEventListener("click", dislike);
+    clearAllBtn.addEventListener("click", clearAll);
+
+    // ===== INITIALIZE =====
+    renderLikedMovies();
+    loadMovies();
+  </script>
+
+</body>
+</html>
