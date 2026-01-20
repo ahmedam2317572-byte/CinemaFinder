@@ -3,6 +3,7 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CinemaFinder</title>
+
   <style>
     body {
       margin: 0;
@@ -28,7 +29,7 @@
       border-radius: 3%;
       background: white;
       overflow: hidden;
-      box-shadow: 0% 5% 10% rgba(0,0,0,0.5);
+      box-shadow: 0 5% 10% rgba(0,0,0,0.5);
       margin-bottom: 10%;
       transition: transform 0.4s ease;
     }
@@ -47,16 +48,17 @@
 
     button {
       font-size: 1.2em;
-      padding: 12px 26px;
+      padding: 10% 20%;
       border: none;
-      border-radius: 30px;
+      border-radius: 10%;
       cursor: pointer;
+      transform: translate(-50%, 0%);
     }
 
     .nope { background: #ff4d4d; color: white; }
     .like { background: #4caf50; color: white; }
 
-    /* Liked Movies Section */
+    /* ---------- LIKED MOVIES ---------- */
     .liked-section {
       width: 100%;
       max-width: 95%;
@@ -95,16 +97,16 @@
 
     .remove-btn {
       position: absolute;
-      top: 0%;
-      right: 0%;
+      top: 0;
+      right: 0;
       transform: translate(20%, -20%);
       background: #ff4d4d;
       border: none;
       color: white;
       border-radius: 50%;
-      width: 2%;
-      height: 2%;
-      font-size: 0.8em;
+      width: 22px;
+      height: 22px;
+      font-size: 12px;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -112,26 +114,23 @@
     }
 
     .clear-btn {
-      background-color: #ff4d4d;  /* red */
+      background-color: #ff4d4d;
       color: white;
       border: none;
-      border-radius: 12px;   
-      padding: 1% 2%;        
-      font-size: 1em; 
+      border-radius: 12px;
+      padding: 6px 14px;
+      font-size: 1em;
       font-weight: bold;
       cursor: pointer;
-      transition: background 0.3s, transform 0.2s;
     }
 
     @media (max-width: 768px) {
       .card { width: 95%; height: 50%; }
-      .buttons { flex-direction: column; gap: 3%; }
       .liked-movie { width: 20%; font-size: 0.7em; }
-      .remove-btn { width: 4%; height: 4%; font-size: 0.6em; }
     }
-
   </style>
 </head>
+
 <body>
 
   <div class="container">
@@ -145,7 +144,6 @@
     </div>
   </div>
 
-  <!-- Liked Movies Section -->
   <div class="liked-section">
     <div class="liked-header">
       <h2>Liked Movies</h2>
@@ -155,98 +153,86 @@
   </div>
 
   <script>
-    // ===== STATE VARIABLES =====
-    const API_KEY = "d061e0dca3899140151d7b1e45ebf6c2"; // <-- Put your TMDb API key
+    /* ===== CONFIG ===== */
+    const API_KEY = "d061e0dca3899140151d7b1e45ebf6c2";
     const IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 
+    /* ===== STATE ===== */
     let movies = [];
-    let index = 0;
+    let index = parseInt(localStorage.getItem("movieIndex")) || 0;
     let page = 1;
 
     let likedMovies = JSON.parse(localStorage.getItem("likedMovies")) || [];
 
+    /* ===== ELEMENTS ===== */
     const poster = document.getElementById("poster");
     const card = document.getElementById("card");
     const likedContainer = document.getElementById("likedContainer");
 
-    const likeBtn = document.getElementById("likeBtn");
-    const dislikeBtn = document.getElementById("dislikeBtn");
-    const clearAllBtn = document.getElementById("clearAllBtn");
-
-    // ===== LOAD MOVIES =====
+    /* ===== LOAD MOVIES ===== */
     async function loadMovies() {
-      try {
-        const res = await fetch(
-          `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}` +
-          `&primary_release_date.gte=2000-01-01` +
-          `&primary_release_date.lte=2025-12-31` +
-          `&sort_by=popularity.desc` +
-          `&vote_count.gte=50` +
-          `&page=${page}`
-        );
-        const data = await res.json();
-        const validMovies = data.results.filter(m => m.poster_path);
-        movies = movies.concat(validMovies);
-        page++;
-        showMovie();
-      } catch (err) {
-        console.error("Failed to load movies:", err);
-      }
+      const res = await fetch(
+        `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}` +
+        `&primary_release_date.gte=2000-01-01` +
+        `&sort_by=popularity.desc` +
+        `&vote_count.gte=50` +
+        `&page=${page}`
+      );
+
+      const data = await res.json();
+      movies = movies.concat(data.results.filter(m => m.poster_path));
+      page++;
+      showMovie();
     }
 
-    // ===== SHOW CURRENT MOVIE =====
+    /* ===== SHOW MOVIE ===== */
     function showMovie() {
       if (index >= movies.length - 5) loadMovies();
       if (!movies[index]) return;
       poster.src = IMAGE_BASE + movies[index].poster_path;
     }
 
-    // ===== LIKE MOVIE =====
+    /* ===== LIKE ===== */
     function like() {
       if (!movies[index]) return;
 
       animateCard(1);
 
       const movie = movies[index];
-      const alreadyLiked = likedMovies.some(m => m.id === movie.id);
-
-      if (!alreadyLiked) {
-        const likedMovie = {
+      if (!likedMovies.some(m => m.id === movie.id)) {
+        likedMovies.push({
           id: movie.id,
           title: movie.title,
           poster: movie.poster_path,
           year: movie.release_date?.split("-")[0]
-        };
-        likedMovies.push(likedMovie);
+        });
+
         localStorage.setItem("likedMovies", JSON.stringify(likedMovies));
         renderLikedMovies();
       }
 
       index++;
+      localStorage.setItem("movieIndex", index);
       nextMovie();
     }
 
-    // ===== DISLIKE MOVIE =====
+    /* ===== DISLIKE ===== */
     function dislike() {
       if (!movies[index]) return;
 
       animateCard(-1);
       index++;
+      localStorage.setItem("movieIndex", index);
       nextMovie();
     }
 
-    // ===== NEXT MOVIE =====
     function nextMovie() {
       setTimeout(() => {
-        card.style.transition = "none";
         card.style.transform = "translateX(0)";
-        void card.offsetWidth;
-        card.style.transition = "transform 0.4s";
         showMovie();
       }, 400);
     }
 
-    // ===== CARD ANIMATION =====
     function animateCard(dir) {
       card.style.transform =
         dir === 1
@@ -254,54 +240,45 @@
           : "translateX(-500px) rotate(-20deg)";
     }
 
-    // ===== RENDER LIKED MOVIES =====
+    /* ===== LIKED MOVIES UI ===== */
     function renderLikedMovies() {
       likedContainer.innerHTML = "";
 
       likedMovies.forEach((movie, i) => {
         const div = document.createElement("div");
         div.className = "liked-movie";
-
         div.innerHTML = `
-          <img src="${IMAGE_BASE + movie.poster}" alt="${movie.title}">
+          <img src="${IMAGE_BASE + movie.poster}">
           <span>${movie.title} (${movie.year})</span>
-          <button class="remove-btn" data-index="${i}">X</button>
+          <button class="remove-btn" onclick="removeMovie(${i})">X</button>
         `;
-
         likedContainer.appendChild(div);
-      });
-
-      // Attach remove event to each button
-      document.querySelectorAll(".remove-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const idx = btn.getAttribute("data-index");
-          removeMovie(idx);
-        });
       });
     }
 
-    // ===== REMOVE ONE MOVIE =====
-    function removeMovie(idx) {
-      likedMovies.splice(idx, 1);
+    function removeMovie(i) {
+      likedMovies.splice(i, 1);
       localStorage.setItem("likedMovies", JSON.stringify(likedMovies));
       renderLikedMovies();
     }
 
-    // ===== CLEAR ALL =====
     function clearAll() {
-      
-        likedMovies = [];
-        localStorage.setItem("likedMovies", JSON.stringify(likedMovies));
-        renderLikedMovies();
-      
+      likedMovies = [];
+      index = 0;
+
+      localStorage.removeItem("likedMovies");
+      localStorage.removeItem("movieIndex");
+
+      renderLikedMovies();
+      showMovie();
     }
 
-    // ===== EVENT LISTENERS =====
-    likeBtn.addEventListener("click", like);
-    dislikeBtn.addEventListener("click", dislike);
-    clearAllBtn.addEventListener("click", clearAll);
+    /* ===== EVENTS ===== */
+    document.getElementById("likeBtn").onclick = like;
+    document.getElementById("dislikeBtn").onclick = dislike;
+    document.getElementById("clearAllBtn").onclick = clearAll;
 
-    // ===== INITIALIZE =====
+    /* ===== INIT ===== */
     renderLikedMovies();
     loadMovies();
   </script>
