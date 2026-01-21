@@ -5,9 +5,20 @@
   <title>CinemaFinder</title>
 
   <style>
+
+    .mute {
+      
+      position: fixed;
+      left: 2%;
+      padding: 0% 0%;
+      gap: 0%;
+    }
+
     body {
       margin: 0;
       background-image: url("5630939.jpg");
+      background-attachment: fixed;
+      background-size: cover;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -104,8 +115,7 @@
       border: none;
       color: white;
       border-radius: 50%;
-      width: 22px;
-      height: 22px;
+      padding: 3% 5%;
       font-size: 12px;
       cursor: pointer;
       display: flex;
@@ -131,6 +141,13 @@
   </style>
 </head>
 
+  <audio id="bgMusic" autoplay loop>
+    <source src="jazz-lounge-elevator-music-332339.mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
+  </audio>
+  <div class="mute">
+    <button id="muteBtn" style="background-color: transparent;" >🔊</button>
+  </div>
 <body>
 
   <div class="container">
@@ -281,6 +298,26 @@
     /* ===== INIT ===== */
     renderLikedMovies();
     loadMovies();
+
+    /* ==== MUTE TOGGLE ==== */
+
+          muteBtn.addEventListener('click', () => {
+          if (music.muted) {
+          music.muted = false;
+          muteBtn.textContent = "🔊";
+          } else {
+            music.muted = true;
+            muteBtn.textContent = "🔇";
+          }
+    });
+
+    // Optional: ensure music plays even if autoplay is restricted
+    const music = document.getElementById('bgMusic');
+    music.volume = 0.01// set volume (0 to 1)
+    music.play().catch(() => {
+      document.body.addEventListener('click', () => music.play());
+    });
+
   </script>
 
 </body>
